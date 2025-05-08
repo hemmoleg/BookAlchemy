@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Library</title>
+    <style>
+      .book { display: flex; align-items: center; margin-bottom: 1em; }
+      .book img { width: 80px; height: auto; margin-right: 1em; }
+      .message { color: #a00; margin: 1em 0; }
+    </style>
+  </head>
+  <body>
+    <a href="{{ url_for('home', sort='title') }}">Sort by Title</a> |
+    <a href="{{ url_for('home', sort='author') }}">Sort by Author</a>
+
+    <!-- Search form -->
+    <form method="GET" action="{{ url_for('home') }}">
+      <input
+        type="text"
+        name="q"
+        placeholder="Search by title…"
+        value="{{ request.args.get('q','') }}"
+      >
+      <button type="submit">Search</button>
+    </form>
+
+
+    {% if message %}
+      <div class="message">{{ message }}</div>
+    {% endif %}
+
+
+    {% for book in books %}
+      <div class="book">
+        <img
+          src="{{ book.cover_url }}"
+          alt="Cover for {{ book.title }}"
+          onerror="this.src='/static/no-cover.png'"
+        >
+        <div>
+          <h3>{{ book.title }}</h3>
+          <p>by {{ book.author.name }}</p>
+        </div>
+
+        <form action="{{ url_for('delete_book', book_id=book.id) }}"
+          method="POST">
+      <button type="submit">Delete Book</button>
+    </form>
+
+      </div>
+    {% endfor %}
+
+  </body>
+</html>
