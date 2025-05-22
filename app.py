@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from data_models import db, Author, Book
 import os
 
 app = Flask(__name__)
+app.secret_key = 'lorem_ipsum_dolor_sit_amet'
 
 cwd = os.getcwd()
 db_file = os.path.join(cwd, "data", "library.sqlite")
@@ -11,7 +12,6 @@ db_file = os.path.join(cwd, "data", "library.sqlite")
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_file}'
 #app.config['SQLALCHEMY_ECHO'] = True
 db.init_app(app)
-
 
 @app.route('/', methods=['GET'])
 def home():
@@ -69,16 +69,18 @@ def add_author():
     }
   except Exception as e:
     data = {
-      'message': f'error: {e}'
+      'message': f'error: could not add author'
     }
+    db.session.rollback()
 
   return render_template("add_author.html", **data)
 
 
 @app.route('/add_book', methods=['GET', 'POST'])
 def add_book():
+    authors = Author.query.all()
+
     if request.method == 'GET':
-      authors = Author.query.all()
       return render_template('add_book.html', authors=authors)
 
     isbn = request.form.get('isbn')
@@ -102,10 +104,10 @@ def add_book():
       }
     except Exception as e:
       data = {
-        'message': f'error: {e}'
+        'message': 'error: could not add book'
       }
+      db.session.rollback()
 
-    authors = Author.query.all()
     return render_template('add_book.html', **data, authors=authors)
 
 
@@ -113,7 +115,9 @@ def add_book():
 def delete_book(book_id):
     book = Book.query.get(book_id)
     if book is None:
-      return render_template("home.html", message=f'no book with id {book_id} found')
+        message = f'no book with id {book_id} found'
+        flash(message, 'error')
+        return redirect(url_for('home'))
 
     author = book.author
 
@@ -123,12 +127,12 @@ def delete_book(book_id):
     if not author.books:
         db.session.delete(author)
         db.session.commit()
-        message = (f"Deleted book “{book.title}” and author “{author.name}” (no remaining books).", "success")
+        message = f"Deleted book “{book.title}” and author “{author.name}” (no remaining books)."
     else:
-        message = (f"Deleted book “{book.title}”.", "success")
+        message = f"Deleted book “{book.title}”."
 
-    return render_template("home.html", message=message)
-
+    flash(message, 'success')
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
